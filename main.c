@@ -2,9 +2,13 @@
 #include <math.h>
 
 #define DIVISION_PER_UNIT 100
-#define CHI_SQUARE_N 30
-#define INITIAL_STEP 0.5
+#define INITIAL_STEP 0.1
 #define STEP_SIZE 0.01
+
+#define CHI_SQUARE_N 2
+#define F_M 3
+#define F_N 2
+
 
 const static double gammaLnValues[35] =
         {0, -0.120782237635245, 0, 0.284682870472919, 0.693147180559945,1.20097360234707, 1.79175946922806,
@@ -19,31 +23,53 @@ typedef struct {
     double upperBound;
 } Interval;
 
-Interval getOptimizedInterval(double alpha);
-double compositeSimpsonIntegration(double lowerBound, double upperBound);
+typedef enum {
+    false, true
+} bool;
+
+Interval getOptimizedInterval(double alpha, double(*function)(double),
+                              double(*separation)(), bool boundaryMode);
+double compositeSimpsonIntegration(double(*function)(double), double lowerBound, double upperBound);
+double chiSquare(double x);
+double fDistribution(double x);
+double getChiSquareSeparation();
+double getFSeparation();
 double chiSquareDensityFunction(double x, double n);
+double fDensityFunction(double x, double m, double n);
 double getGamma(double x);
 
+
 int main() {
-    Interval interval = getOptimizedInterval(0.05);
-    printf("The interval is [%lf, %lf].\n", interval.lowerBound, interval.upperBound);
+    Interval interval = getOptimizedInterval(0.05, chiSquare, getChiSquareSeparation, false);
+    printf("The optimized interval is [%lf, %lf].\n", interval.lowerBound, interval.upperBound);
 }
 
-Interval getOptimizedInterval(double alpha) {
-    double separationPoint = CHI_SQUARE_N - 2;
-    double integration = compositeSimpsonIntegration(separationPoint - INITIAL_STEP / 2,
+Interval getOptimizedInterval(double alpha, double(*function)(double),
+                              double(*separation)(), bool boundaryMode) {
+    bool isBoundaryMode = false;
+    double separationPoint = separation();
+    double integration = compositeSimpsonIntegration(function, separationPoint - INITIAL_STEP / 2,
             separationPoint + INITIAL_STEP / 2);
     double frontPoint = separationPoint + INITIAL_STEP / 2;
     double rarePoint = separationPoint - INITIAL_STEP / 2;
     while (integration < 1.0 - alpha) {
-        double rareValue = chiSquareDensityFunction(rarePoint, CHI_SQUARE_N);
-        double frontValue = chiSquareDensityFunction(frontPoint, CHI_SQUARE_N);
-        if (frontValue > rareValue) {
-            integration = compositeSimpsonIntegration(rarePoint, frontPoint + STEP_SIZE);
+        if (rarePoint <= 0) {
+            isBoundaryMode = true;
+        }
+        if (isBoundaryMode) {
+            rarePoint = 0;
+            integration = compositeSimpsonIntegration(function, rarePoint, frontPoint + STEP_SIZE);
             frontPoint += STEP_SIZE;
         } else {
-            integration = compositeSimpsonIntegration(rarePoint - STEP_SIZE, frontPoint);
-            rarePoint -= STEP_SIZE;
+            double rareValue = function(rarePoint);
+            double frontValue = function(frontPoint);
+            if (frontValue > rareValue) {
+                integration = compositeSimpsonIntegration(function, rarePoint, frontPoint + STEP_SIZE);
+                frontPoint += STEP_SIZE;
+            } else {
+                integration = compositeSimpsonIntegration(function, rarePoint - STEP_SIZE, frontPoint);
+                rarePoint -= STEP_SIZE;
+            }
         }
     }
     Interval interval;
@@ -52,24 +78,40 @@ Interval getOptimizedInterval(double alpha) {
     return interval;
 }
 
-double compositeSimpsonIntegration(double lowerBound, double upperBound) {
+double compositeSimpsonIntegration(double(*function)(double), double lowerBound, double upperBound) {
     double division = DIVISION_PER_UNIT * (upperBound - lowerBound);
     double steps = (upperBound - lowerBound) / division / 2.0;
     double integration = 0;
     double sumOfEven = 0;
     double sumOfOdd = 0;
     for (int i = 2; i < 2 * division; i += 2) {
-        sumOfEven += chiSquareDensityFunction(lowerBound + i * steps, CHI_SQUARE_N);
+        sumOfEven += function(lowerBound + i * steps);
     }
     for (int i = 1; i < 2 * division; i += 2) {
-        sumOfOdd += chiSquareDensityFunction(lowerBound + i * steps, CHI_SQUARE_N);
+        sumOfOdd += function(lowerBound + i * steps);
     }
-    integration = steps / 3.0 * (chiSquareDensityFunction(lowerBound, CHI_SQUARE_N) +
-            4 * sumOfOdd + 2 * sumOfEven + chiSquareDensityFunction(upperBound, CHI_SQUARE_N));
+    integration = steps / 3.0 * (function(lowerBound) + 4 * sumOfOdd + 2 * sumOfEven + function(upperBound));
     return integration;
 }
 
-// n is not expected to choose randomly
+double chiSquare(double x) {
+    return chiSquareDensityFunction(x, CHI_SQUARE_N);
+}
+
+double fDistribution(double x) {
+    return fDensityFunction(x, F_M, F_N);
+}
+
+double getChiSquareSeparation() {
+    return CHI_SQUARE_N - 2;
+}
+
+double getFSeparation() {
+    return (F_M * F_N - 2.0 * F_N) / (F_M * F_N + 2.0 * F_M);
+}
+
+// The density function of Chi-Square distribution
+// n is NOT expected to choose randomly
 // Only values between 1 to 10, step 0.5 could be chosen from
 double chiSquareDensityFunction(double x, double n) {
     if (x <= 0) {
@@ -81,9 +123,22 @@ double chiSquareDensityFunction(double x, double n) {
     return part_1 * part_2 / x / part_3;
 }
 
+// The density function of F distribution
+// n is NOT expected to choose randomly
+// Only values between 1 to 10, step 0.5 could be chosen from
+double fDensityFunction(double x, double m, double n) {
+    if (x <= 0) {
+        return 0;
+    }
+    const double part_1 = getGamma((m + n) / 2.0) / (getGamma(n / 2.0) * getGamma(m / 2.0));
+    const double part_2 = pow(m, m / 2.0) * pow(n, n / 2.0) * pow(x, m / 2.0 - 1);
+    const double part_3 = pow(n + m * x, -(m + n) / 2.0);
+    return part_1 * part_2 * part_3;
+}
+
 // Not every value can be fetched
 double getGamma(double x) {
-    double gammaLn = gammaLnValues[(int)x * 2 - 2];
+    double gammaLn = gammaLnValues[(int)(x * 2) - 2];
     double gammaValue = pow(M_E, gammaLn);
     return gammaValue;
 }
