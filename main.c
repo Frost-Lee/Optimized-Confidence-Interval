@@ -1,13 +1,13 @@
 #include <stdio.h>
 #include <math.h>
 
-#define DIVISION_PER_UNIT 100
+#define DIVISION_PER_UNIT 10
 #define INITIAL_STEP 0.1
 #define STEP_SIZE 0.01
 
-#define CHI_SQUARE_N 2
-#define F_M 3
-#define F_N 2
+#define CHI_SQUARE_N 15
+#define F_M 21
+#define F_N 21
 
 
 const static double gammaLnValues[35] =
@@ -27,8 +27,7 @@ typedef enum {
     false, true
 } bool;
 
-Interval getOptimizedInterval(double alpha, double(*function)(double),
-                              double(*separation)(), bool boundaryMode);
+Interval getOptimizedInterval(double alpha, double(*function)(double), double(*separation)());
 double compositeSimpsonIntegration(double(*function)(double), double lowerBound, double upperBound);
 double chiSquare(double x);
 double fDistribution(double x);
@@ -40,12 +39,14 @@ double getGamma(double x);
 
 
 int main() {
-    Interval interval = getOptimizedInterval(0.05, chiSquare, getChiSquareSeparation, false);
-    printf("The optimized interval is [%lf, %lf].\n", interval.lowerBound, interval.upperBound);
+    double alphaValues[] = {0.02, 0.05, 0.1, 0.2};
+    for (int i = 0; i < 4; i ++) {
+        Interval interval = getOptimizedInterval(alphaValues[i], fDistribution, getFSeparation);
+        printf("[%.2lf, %.2lf]\t", interval.lowerBound, interval.upperBound);
+    }
 }
 
-Interval getOptimizedInterval(double alpha, double(*function)(double),
-                              double(*separation)(), bool boundaryMode) {
+Interval getOptimizedInterval(double alpha, double(*function)(double), double(*separation)()) {
     bool isBoundaryMode = false;
     double separationPoint = separation();
     double integration = compositeSimpsonIntegration(function, separationPoint - INITIAL_STEP / 2,
