@@ -4,7 +4,7 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_C
-  "/Users/licanchen/Desktop/Optimized Interval/main.c" "/Users/licanchen/Desktop/Optimized Interval/cmake-build-debug/CMakeFiles/Optimized_Interval.dir/main.c.o"
+  "/Users/licanchen/Documents/学业/科学类/数理统计/Optimized Interval/main.c" "/Users/licanchen/Documents/学业/科学类/数理统计/Optimized Interval/cmake-build-debug/CMakeFiles/Optimized_Interval.dir/main.c.o"
   )
 set(CMAKE_C_COMPILER_ID "AppleClang")
 

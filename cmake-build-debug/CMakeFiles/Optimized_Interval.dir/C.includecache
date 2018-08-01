@@ -6,8 +6,10 @@
 
 #IncludeRegexTransform: 
 
-/Users/licanchen/Desktop/Optimized Interval/main.c
+/Users/licanchen/Documents/学业/科学类/数理统计/Optimized Interval/main.c
 stdio.h
+-
+stdlib.h
 -
 math.h
 -
