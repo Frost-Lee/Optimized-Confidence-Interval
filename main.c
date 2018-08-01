@@ -48,11 +48,6 @@ double getAlpha();
 
 
 int main() {
-//    double alphaValues[] = {0.02, 0.05, 0.1, 0.2};
-//    for (int i = 0; i < 4; i ++) {
-//        Interval interval = getOptimizedInterval(alphaValues[i], fDistribution, getFSeparation);
-//        printf("[%.2lf, %.2lf]\t", interval.lowerBound, interval.upperBound);
-//    }
     printf("This program can help you to get better optimized interval in F Distribution or"
            " Chi-Square Distribution.\n");
     while (true) {
